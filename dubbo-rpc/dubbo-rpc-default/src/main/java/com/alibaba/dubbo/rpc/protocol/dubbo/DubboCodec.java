@@ -29,6 +29,7 @@ import com.alibaba.dubbo.common.serialize.ObjectInput;
 import com.alibaba.dubbo.common.serialize.ObjectOutput;
 import com.alibaba.dubbo.common.serialize.OptimizedSerialization;
 import com.alibaba.dubbo.common.serialize.Serialization;
+import com.alibaba.dubbo.common.serialize.support.kryo.KryoObjectOutput;
 import com.alibaba.dubbo.common.utils.ReflectUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.remoting.Channel;
@@ -180,7 +181,8 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
 
     // NOTICE modified by lishen
     // TODO
-    if (getSerialization(channel) instanceof OptimizedSerialization) {
+    Serialization s = getSerialization(channel);
+    if (s instanceof OptimizedSerialization) {
       if (!containComplexArguments(inv)) {
         out.writeInt(inv.getParameterTypes().length);
       } else {
@@ -192,7 +194,12 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
     Object[] args = inv.getArguments();
     if (args != null)
       for (int i = 0; i < args.length; i++) {
-        out.writeObject(encodeInvocationArgument(channel, inv, i));
+        if (out instanceof KryoObjectOutput) {
+          ((KryoObjectOutput) out).writeObjectAndClass(encodeInvocationArgument(channel, inv, i),
+              inv.getParameterTypes()[i]);
+        } else {
+          out.writeObject(encodeInvocationArgument(channel, inv, i));
+        }
       }
     out.writeObject(inv.getAttachments());
   }
@@ -234,6 +241,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
             || baseType == boolean.class || baseType == char.class) {
           continue;
         }
+        // 存在复合类型，不匹配，Todo 应该抛出异常？？？
         return true;
       }
     }
