@@ -156,7 +156,7 @@ public class KryoObjectInput implements ObjectInput, Cleanable {
   }
 
   public <T> T readClassObject(Class<T> cls) {
-    return kryo.readObject(input, cls);
+    return kryo.readObjectOrNull(input, cls);
   }
 
   public void cleanup() {
